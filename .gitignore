@@ -426,3 +426,9 @@ FodyWeavers.xsd
 
 # Official VS Code C# Dev Kit Extension exclusion
 #*.lscache
+
+# Banco SQLite local
+*.db
+*.db-shm 
+*.db-wal
+*.db-journal 
