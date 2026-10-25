@@ -64,7 +64,7 @@ namespace AlmoxarifadoHospitalar.Migrations
                     b.Property<int>("QuantidadeEstoque")
                         .HasColumnType("INTEGER");
 
-                    b.Property<string>("UnidadeMedidade")
+                    b.Property<string>("UnidadeMedida")
                         .IsRequired()
                         .HasColumnType("TEXT");
 
