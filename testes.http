@@ -18,3 +18,41 @@ Content-Type: application/json
   "senha": "Teste123!",
   "setorId": 1
 }
+
+### Recusar cadastro com setor inexistente
+POST {{baseUrl}}/usuarios
+Content-Type: application/json
+
+{
+  "nome": "Teste Setor Inexistente",
+  "email": "setor-invalido@example.com",
+  "senha": "Teste123!",
+  "setorId": 9999
+}
+
+### Criar requisição com papel e copos
+POST {{baseUrl}}/requisicoes
+Content-Type: application/json
+
+{
+  "solicitanteId": 1,
+  "observacao": "Materiais para consumo do setor.",
+  "itens": [
+    {
+      "materialId": 2,
+      "quantidade": 3
+    },
+    {
+      "materialId": 3,
+      "quantidade": 2
+    }
+  ]
+}
+
+### Consultar requisição 1
+GET {{baseUrl}}/requisicoes/1
+Accept: application/json
+
+### Listar requisições
+GET {{baseUrl}}/requisicoes
+Accept: application/json

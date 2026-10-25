@@ -160,4 +160,292 @@ app.MapPost("/usuarios", async (CadastroUsuarioDto dados, AppDbContext db) =>
     }, statusCode: StatusCodes.Status201Created);
 });
 
+app.MapPost("/requisicoes", async (
+    CriarRequisicaoDto dados, AppDbContext db) =>
+{
+    if (dados.Itens is null || dados.Itens.Count == 0)
+    {
+        return Results.BadRequest("Informe pelo menos um material.");
+    }
+
+    if (dados.Itens.Any(i => i is null || i.Quantidade <= 0))
+    {
+        return Results.BadRequest("Informe itens com quantidades positivas.");
+    }
+
+    var ids = dados.Itens.Select(i => i.MaterialId).ToList();
+
+    if (ids.Distinct().Count() != ids.Count)
+    {
+        return Results.BadRequest("Não repita materiais na mesma requisição.");
+    }
+
+    var solicitante = await db.Usuarios
+        .Include(u => u.Setor)
+        .FirstOrDefaultAsync(u => u.Id == dados.SolicitanteId);
+
+    if (solicitante is null)
+    {
+        return Results.BadRequest("Solicitante não encontrado.");
+    }
+
+    if (solicitante.Perfil != PerfilUsuario.Colaborador)
+    {
+        return Results.BadRequest("O solicitante deve ser um colaborador.");
+    }
+
+    if (solicitante.Setor is null || !solicitante.Setor.Ativo)
+    {
+        return Results.BadRequest("O colaborador precisa de um setor ativo.");
+    }
+
+    int materiaisEncontrados = await db.Materiais
+        .CountAsync(m => ids.Contains(m.Id) && m.Ativo);
+
+    if (materiaisEncontrados != ids.Count)
+    {
+        return Results.BadRequest(
+            "Um ou mais materiais não existem ou estão inativos.");
+    }
+
+    var requisicao = new Requisicao
+    {
+        SolicitanteId = solicitante.Id,
+        SetorId = solicitante.Setor.Id,
+        Observacao = dados.Observacao?.Trim(),
+        Status = StatusRequisicao.Pendente
+    };
+
+    db.Requisicoes.Add(requisicao);
+
+    foreach (var item in dados.Itens)
+    {
+        db.ItensRequisicao.Add(new ItemRequisicao
+        {
+            Requisicao = requisicao,
+            MaterialId = item.MaterialId,
+            QuantidadeSolicitada = item.Quantidade,
+            QuantidadeAtendida = 0,
+            Status = StatusItemRequisicao.Pendente
+        });
+    }
+
+    await db.SaveChangesAsync();
+
+    return Results.Json(new
+    {
+        requisicao.Id,
+        requisicao.SolicitanteId,
+        requisicao.SetorId,
+        requisicao.CriadaEm,
+        requisicao.Observacao,
+        Status = requisicao.Status.ToString(),
+        Itens = dados.Itens
+    }, statusCode: StatusCodes.Status201Created);
+});
+
+app.MapGet("/requisicoes/{id:int}", async (int id, AppDbContext db) =>
+{
+    var requisicao = await db.Requisicoes
+        .AsNoTracking()
+        .Where(r => r.Id == id)
+        .Select(r => new
+        {
+            r.Id,
+            r.SolicitanteId,
+            Solicitante = r.Solicitante.Nome,
+            r.SetorId,
+            Setor = r.Setor.Nome,
+            r.CriadaEm,
+            r.Observacao,
+            r.Status,
+            r.GestorResponsavelId,
+            r.EncerradaEm
+        })
+        .FirstOrDefaultAsync();
+
+    if (requisicao is null)
+    {
+        return Results.NotFound("Requisição não encontrada.");
+    }
+
+    var itens = await db.ItensRequisicao
+        .AsNoTracking()
+        .Where(i => i.RequisicaoId == id)
+        .Select(i => new
+        {
+            i.Id,
+            i.MaterialId,
+            Material = i.Material.Nome,
+            UnidadeMedida = i.Material.UnidadeMedida,
+            i.QuantidadeSolicitada,
+            i.QuantidadeAtendida,
+            i.Status
+        })
+        .ToListAsync();
+
+    return Results.Ok(new
+    {
+        requisicao.Id,
+        requisicao.SolicitanteId,
+        requisicao.Solicitante,
+        requisicao.SetorId,
+        requisicao.Setor,
+        requisicao.CriadaEm,
+        requisicao.Observacao,
+        Status = requisicao.Status.ToString(),
+        requisicao.GestorResponsavelId,
+        requisicao.EncerradaEm,
+        Itens = itens.Select(i => new
+        {
+            i.Id,
+            i.MaterialId,
+            i.Material,
+            i.UnidadeMedida,
+            i.QuantidadeSolicitada,
+            i.QuantidadeAtendida,
+            Status = i.Status.ToString()
+        })
+    });
+});
+
+app.MapGet("/requisicoes", async (AppDbContext db) =>
+{
+    var requisicoes = await db.Requisicoes
+        .AsNoTracking()
+        .OrderByDescending(r => r.CriadaEm)
+        .Select(r => new
+        {
+            r.Id,
+            Solicitante = r.Solicitante.Nome,
+            Setor = r.Setor.Nome,
+            r.CriadaEm,
+            r.Status
+        })
+        .ToListAsync();
+
+    return Results.Ok(requisicoes.Select(r => new
+    {
+        r.Id,
+        r.Solicitante,
+        r.Setor,
+        r.CriadaEm,
+        Status = r.Status.ToString()
+    }));
+});
+
+app.MapPost("/requisicoes/{id:int}/atender", async (
+    int id, AtenderRequisicaoDto dados, AppDbContext db) =>
+{
+    if (dados.Itens is null || dados.Itens.Count == 0)
+    {
+        return Results.BadRequest("Informe os itens do atendimento.");
+    }
+
+    if (dados.Itens.Any(i => i is null || i.QuantidadeAtendida < 0))
+    {
+        return Results.BadRequest("As quantidades não podem ser negativas.");
+    }
+
+    var ids = dados.Itens.Select(i => i.MaterialId).ToList();
+
+    if (ids.Distinct().Count() != ids.Count)
+    {
+        return Results.BadRequest("Não repita materiais no atendimento.");
+    }
+
+    await using var transacao = await db.Database.BeginTransactionAsync();
+
+    var requisicao = await db.Requisicoes.FindAsync(id);
+
+    if (requisicao is null)
+    {
+        return Results.NotFound("Requisição não encontrada.");
+    }
+
+    if (requisicao.Status != StatusRequisicao.Pendente)
+    {
+        return Results.Conflict("Esta requisição já foi encerrada.");
+    }
+
+    var itens = await db.ItensRequisicao
+        .Include(i => i.Material)
+        .Where(i => i.RequisicaoId == id)
+        .ToListAsync();
+
+    if (itens.Count != dados.Itens.Count ||
+        itens.Any(i => !ids.Contains(i.MaterialId)))
+    {
+        return Results.BadRequest(
+            "Informe exatamente todos os materiais desta requisição.");
+    }
+
+    var quantidades = dados.Itens.ToDictionary(
+        i => i.MaterialId,
+        i => i.QuantidadeAtendida);
+
+    foreach (var item in itens)
+    {
+        int quantidade = quantidades[item.MaterialId];
+
+        if (quantidade > item.QuantidadeSolicitada)
+        {
+            return Results.BadRequest(
+                $"Quantidade superior à solicitada: {item.Material.Nome}.");
+        }
+
+        if (quantidade > item.Material.QuantidadeEstoque)
+        {
+            return Results.BadRequest(
+                $"Estoque insuficiente: {item.Material.Nome}.");
+        }
+
+        if (quantidade > 0 && !item.Material.Ativo)
+        {
+            return Results.BadRequest(
+                $"Material inativo: {item.Material.Nome}.");
+        }
+
+        if (quantidade == 0 && item.Material.QuantidadeEstoque > 0)
+        {
+            return Results.BadRequest(
+                $"O material {item.Material.Nome} possui estoque. " +
+                "Informe uma quantidade para atendimento.");
+        }
+    }
+
+    foreach (var item in itens)
+    {
+        int quantidade = quantidades[item.MaterialId];
+
+        item.QuantidadeAtendida = quantidade;
+        item.Material.QuantidadeEstoque -= quantidade;
+
+        item.Status = quantidade == 0
+            ? StatusItemRequisicao.SemEstoque
+            : quantidade == item.QuantidadeSolicitada
+                ? StatusItemRequisicao.Atendido
+                : StatusItemRequisicao.AtendidoParcialmente;
+    }
+
+    requisicao.Status = itens.All(
+        i => i.QuantidadeAtendida == i.QuantidadeSolicitada)
+        ? StatusRequisicao.Atendida
+        : itens.Any(i => i.QuantidadeAtendida > 0)
+            ? StatusRequisicao.AtendidaParcialmente
+            : StatusRequisicao.NaoAtendida;
+
+    requisicao.EncerradaEm = DateTime.UtcNow;
+
+    await db.SaveChangesAsync();
+    await transacao.CommitAsync();
+
+    return Results.Ok(new
+    {
+        requisicao.Id,
+        Status = requisicao.Status.ToString(),
+        requisicao.EncerradaEm
+    });
+});
+
 app.Run();
