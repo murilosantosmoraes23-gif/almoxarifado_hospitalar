@@ -1,0 +1,20 @@
+@baseUrl = http://localhost:5053
+
+### Listar setores
+GET {{baseUrl}}/setores
+Accept: application/json
+
+### Listar materiais
+GET {{baseUrl}}/materiais
+Accept: application/json
+
+### Cadastrar colaborador
+POST {{baseUrl}}/usuarios
+Content-Type: application/json
+
+{
+  "nome": "Colaborador Teste",
+  "email": "colaborador@example.com",
+  "senha": "Teste123!",
+  "setorId": 1
+}
