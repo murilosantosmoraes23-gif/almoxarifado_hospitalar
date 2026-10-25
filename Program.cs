@@ -88,18 +88,22 @@ app.MapDelete("/materiais/{id:int}", async (int id, AppDbContext db) =>
 {
     var material = await db.Materiais.FindAsync(id);
 
-    if (material == null)
+    if (material is null)
     {
         return Results.NotFound("Material não encontrado.");
     }
 
-    if (!material.Ativo)
+    bool possuiHistorico = await db.ItensRequisicao
+        .AnyAsync(i => i.MaterialId == id);
+
+    if (possuiHistorico)
     {
-        return Results.Conflict("Material já está inativo.");
+        return Results.Conflict(
+            "Material vinculado a requisições não pode ser excluído. " +
+            "Use a edição para desativá-lo.");
     }
 
-    material.Ativo = false;
-
+    db.Materiais.Remove(material);
     await db.SaveChangesAsync();
 
     return Results.NoContent();

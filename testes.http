@@ -56,3 +56,29 @@ Accept: application/json
 ### Listar requisições
 GET {{baseUrl}}/requisicoes
 Accept: application/json
+
+### Atender parcialmente a requisição 1
+POST {{baseUrl}}/requisicoes/1/atender
+Content-Type: application/json
+
+{
+  "itens": [
+    {
+      "materialId": 2,
+      "quantidadeAtendida": 3
+    },
+    {
+      "materialId": 3,
+      "quantidadeAtendida": 0
+    }
+  ]
+}
+
+### Excluir material duplicado sem histórico
+DELETE {{baseUrl}}/materiais/9
+
+### Impedir exclusão de material utilizado
+DELETE {{baseUrl}}/materiais/2
+
+### Conferir materiais restantes
+GET {{baseUrl}}/materiais
