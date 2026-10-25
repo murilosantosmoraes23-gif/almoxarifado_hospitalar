@@ -55,7 +55,7 @@ app.MapPut("/materiais/{id:int}", async (int id, AlmoxarifadoHospitalar.Models.M
     }
 
     material.Nome = dados.Nome;
-    material.UnidadeMedidade = dados.UnidadeMedidade;
+    material.UnidadeMedida = dados.UnidadeMedida;
     material.QuantidadeEstoque = dados.QuantidadeEstoque;
     material.Ativo = dados.Ativo;
 
