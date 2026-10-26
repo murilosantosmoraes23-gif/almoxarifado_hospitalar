@@ -1,0 +1,84 @@
+@baseUrl = http://localhost:5053
+
+### Listar setores
+GET {{baseUrl}}/setores
+Accept: application/json
+
+### Listar materiais
+GET {{baseUrl}}/materiais
+Accept: application/json
+
+### Cadastrar colaborador
+POST {{baseUrl}}/usuarios
+Content-Type: application/json
+
+{
+  "nome": "Colaborador Teste",
+  "email": "colaborador@example.com",
+  "senha": "Teste123!",
+  "setorId": 1
+}
+
+### Recusar cadastro com setor inexistente
+POST {{baseUrl}}/usuarios
+Content-Type: application/json
+
+{
+  "nome": "Teste Setor Inexistente",
+  "email": "setor-invalido@example.com",
+  "senha": "Teste123!",
+  "setorId": 9999
+}
+
+### Criar requisição com papel e copos
+POST {{baseUrl}}/requisicoes
+Content-Type: application/json
+
+{
+  "solicitanteId": 1,
+  "observacao": "Materiais para consumo do setor.",
+  "itens": [
+    {
+      "materialId": 2,
+      "quantidade": 3
+    },
+    {
+      "materialId": 3,
+      "quantidade": 2
+    }
+  ]
+}
+
+### Consultar requisição 1
+GET {{baseUrl}}/requisicoes/1
+Accept: application/json
+
+### Listar requisições
+GET {{baseUrl}}/requisicoes
+Accept: application/json
+
+### Atender parcialmente a requisição 1
+POST {{baseUrl}}/requisicoes/1/atender
+Content-Type: application/json
+
+{
+  "itens": [
+    {
+      "materialId": 2,
+      "quantidadeAtendida": 3
+    },
+    {
+      "materialId": 3,
+      "quantidadeAtendida": 0
+    }
+  ]
+}
+
+### Excluir material duplicado sem histórico
+DELETE {{baseUrl}}/materiais/9
+
+### Impedir exclusão de material utilizado
+DELETE {{baseUrl}}/materiais/2
+
+### Conferir materiais restantes
+GET {{baseUrl}}/materiais
