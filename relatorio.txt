@@ -1,0 +1,42 @@
+ALMOXARIFADO HOSPITALAR — RELATÓRIO
+
+Integrantes: Murilo dos Santos de Moraes e Leonardo Teles Pereira
+Curso: Ciência da Computação
+Disciplina: Desenvolvimento de Software Visual
+
+OBJETIVO
+API acadêmica para cadastrar materiais e atender requisições de consumo dos setores de um hospital, permitindo atendimento parcial e baixa de estoque.
+
+TECNOLOGIAS E ESTRUTURA
+C#, .NET 8, Minimal API, Entity Framework Core, SQLite e GitHub.
+Cinco entidades: Usuario, Setor, Material, Requisicao e ItemRequisicao. Os pedidos vinculam colaboradores, setores e materiais existentes.
+
+FUNCIONALIDADES
+- Cadastro, listagem, edição e exclusão de materiais sem histórico.
+- Proteção contra exclusão de materiais utilizados em requisições.
+- Oito setores predefinidos e cadastro de colaboradores com senha em hash.
+- Criação, listagem e consulta de requisições com vários materiais.
+- Atendimento parcial, baixa de estoque e bloqueio de atendimento repetido.
+
+TESTES REALIZADOS
+CRUD de materiais; rejeição de nome vazio, estoque negativo e setor inexistente; criação e consulta de pedido; atendimento parcial e proteção do histórico.
+No teste principal, foram entregues três resmas de papel e nenhum pacote de copos, que estavam sem estoque. O pedido ficou AtendidaParcialmente, o papel passou de dez para sete resmas e um segundo atendimento foi bloqueado.
+
+EXECUÇÃO
+Com SDK .NET 8 instalado, executar na pasta do projeto:
+dotnet tool restore
+dotnet restore
+dotnet tool run dotnet-ef database update
+dotnet run
+Manter a API rodando e usar Send Request em testes.http no VS Code com REST Client. Conferir @baseUrl e utilizar os IDs retornados nos cadastros.
+
+COLABORAÇÃO
+Murilo: estrutura, banco, relacionamentos, colaboradores, requisições, atendimento, ajustes e testes.
+Leonardo: CRUD inicial de materiais.
+As contribuições foram registradas em commits, branches e pull requests.
+
+LIMITAÇÕES
+Sem interface gráfica, login ou autorização por perfil. O solicitante é informado por ID. Não há identificação do gestor no atendimento, cancelamento, recusa com justificativa ou relatório de consumo. A edição permite alterar o saldo diretamente.
+
+USO DE IA
+O ChatGPT auxiliou no planejamento, nas explicações, no código, na correção de erros, nos testes e na documentação. A equipe realizou ajustes, compilações e testes HTTP. A aplicação não utiliza IA internamente.
